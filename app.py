@@ -115,7 +115,11 @@ def main(rows_per_page=10):
             st.session_state.page = 1
 
         # Слайдер для выбора страницы
-        st.session_state.page = st.slider("Выберите страницу", min_value=1, max_value=total_pages, value=st.session_state.page)
+        if total_pages > 1:
+            st.session_state.page = st.slider("Выберите страницу", min_value=1, max_value=total_pages,
+                                              value=st.session_state.page)
+        else:
+            st.session_state.page = 1
 
         # Ввод номера страницы
         st.session_state.page = st.number_input("Введите номер страницы", min_value=1, max_value=total_pages, value=st.session_state.page)
