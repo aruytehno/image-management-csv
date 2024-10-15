@@ -134,6 +134,9 @@ def main(file_name, rows_per_page=10):
     else:
         st.session_state.page = 1
 
+     # Ввод номера страницы
+    st.session_state.page = st.number_input("Введите номер страницы", min_value=1, max_value=total_pages,
+                                                value=st.session_state.page)
 
     start_row = (st.session_state.page - 1) * rows_per_page
     end_row = min(start_row + rows_per_page, total_rows)
