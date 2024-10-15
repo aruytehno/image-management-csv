@@ -1,3 +1,5 @@
+import os
+import hashlib
 import streamlit as st
 import pandas as pd
 import math
@@ -5,14 +7,36 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-# Функция для загрузки изображения с URL
-def load_image_from_url(url, idx):
+# Путь к папке для хранения изображений
+IMAGE_CACHE_DIR = "image_cache"
+
+# Функция для создания уникального имени файла на основе URL
+def get_image_filename(url):
+    hash_object = hashlib.md5(url.encode())
+    return hash_object.hexdigest() + ".png"
+
+# Функция для загрузки изображения из кеша или с URL
+def load_image_from_cache_or_url(url, idx):
     if f'image_{idx}' not in st.session_state:
         try:
-            response = requests.get(url)
-            img = Image.open(BytesIO(response.content))
-            img.load()
-            st.session_state[f'image_{idx}'] = (img, response.headers.get('Content-Length', None))
+            # Проверяем, существует ли файл в локальном кеше
+            if not os.path.exists(IMAGE_CACHE_DIR):
+                os.makedirs(IMAGE_CACHE_DIR)
+
+            image_filename = os.path.join(IMAGE_CACHE_DIR, get_image_filename(url))
+
+            # Если файл существует, загружаем его из кеша
+            if os.path.exists(image_filename):
+                img = Image.open(image_filename)
+                img.load()
+                st.session_state[f'image_{idx}'] = (img, os.path.getsize(image_filename))
+            else:
+                # Если файла нет, загружаем изображение с URL и сохраняем в кеш
+                response = requests.get(url)
+                img = Image.open(BytesIO(response.content))
+                img.save(image_filename)  # Сохраняем изображение в кеш
+                img.load()
+                st.session_state[f'image_{idx}'] = (img, response.headers.get('Content-Length', None))
         except Exception:
             st.session_state[f'image_{idx}'] = (None, None)
     return st.session_state[f'image_{idx}']
@@ -46,12 +70,9 @@ def display_data(df, image_columns, start, end):
                     with cols[idx % 10]:
                         img_url = images[img_idx]
                         unique_key = f'{i}_{img_idx}_{idx}'
-                        img, img_size = load_image_from_url(img_url, unique_key)
+                        img, img_size = load_image_from_cache_or_url(img_url, unique_key)
                         if img:
                             st.image(img, width=100)
-                            img_width, img_height = img.size
-                            formatted_size = f"{img_width}x{img_height}"
-                            formatted_weight = f"{int(img_size)/1024:.2f} KB" if img_size else "Размер неизвестен"
                         else:
                             st.markdown(f"""
                                 <div style='width:100px;height:100px;background-color:grey;display:flex;align-items:center;justify-content:center;color:white;flex-direction:column;'>
@@ -60,6 +81,7 @@ def display_data(df, image_columns, start, end):
                                 </div>
                             """, unsafe_allow_html=True)
 
+                        # Кнопки для изменения порядка и удаления изображений
                         with st.container():
                             if st.button(f'❌', key=f'delete_{unique_key}'):
                                 st.session_state[f'order_{i}'].remove(img_idx)
@@ -67,21 +89,18 @@ def display_data(df, image_columns, start, end):
 
                             if idx > 0:
                                 if st.button(f'⬅️', key=f'to_start_{unique_key}'):
-                                    # Перемещаем ссылку на изображение в начало
                                     st.session_state[f'order_{i}'].insert(0, st.session_state[f'order_{i}'].pop(idx))
-                                    # Обновляем DataFrame
-                                    reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
-                                    for j, col in enumerate(image_columns):
-                                        df.at[i, col] = reordered_images[j] if j < len(reordered_images) else None
 
                             if idx < len(st.session_state[f'order_{i}']) - 1:
                                 if st.button(f'➡️', key=f'to_end_{unique_key}'):
-                                    # Перемещаем ссылку на изображение в конец
                                     st.session_state[f'order_{i}'].append(st.session_state[f'order_{i}'].pop(idx))
-                                    # Обновляем DataFrame
-                                    reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
-                                    for j, col in enumerate(image_columns):
-                                        df.at[i, col] = reordered_images[j] if j < len(reordered_images) else None
+
+                reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
+                for j, col in enumerate(image_columns):
+                    if j < len(reordered_images):
+                        df.at[i, col] = reordered_images[j]
+                    else:
+                        df.at[i, col] = None
 
         st.write("---")
 
@@ -104,18 +123,7 @@ def main(file_name, rows_per_page=10):
     total_rows = df.shape[0]
     total_pages = math.ceil(total_rows / rows_per_page)
 
-    if 'orders' not in st.session_state:
-        st.session_state.orders = {}
-        for i in range(total_rows):
-            row_images = [df.loc[i, col] for col in image_columns if pd.notna(df.loc[i, col])]
-            st.session_state.orders[i] = list(range(len(row_images)))
-
     if 'page' not in st.session_state:
-        st.session_state.page = 1
-
-    if total_pages > 1:
-        st.session_state.page = st.slider("Выберите страницу", min_value=1, max_value=total_pages, value=st.session_state.page)
-    else:
         st.session_state.page = 1
 
     st.session_state.page = st.number_input("Введите номер страницы", min_value=1, max_value=total_pages, value=st.session_state.page)
@@ -125,7 +133,7 @@ def main(file_name, rows_per_page=10):
 
     display_data(df, image_columns, start_row, end_row)
 
-    # Сохранение изменений сразу в файл
+    # Сохранение изменений
     if st.button("Сохранить изменения"):
         for i in range(total_rows):
             if f'order_{i}' in st.session_state:
@@ -138,7 +146,7 @@ def main(file_name, rows_per_page=10):
                     else:
                         df.at[i, col] = None
 
-        # Перезаписываем исходный файл
+        # Перезаписываем файл
         df.to_csv(file_name, index=False, sep=';')
         st.success(f"Изменения сохранены в файл: {file_name}")
 
