@@ -42,7 +42,6 @@ def display_data(df, image_columns, start, end):
         st.session_state[f'order_{i}'] = [img_idx for img_idx in st.session_state[f'order_{i}'] if img_idx < len(images)]
 
         # Отображаем изображения, только если есть хотя бы одно изображение
-        # Отображаем изображения, только если есть хотя бы одно изображение
         if images:
             # Создаем скроллбар для изображений
             scroll_container = st.container()
@@ -85,6 +84,14 @@ def display_data(df, image_columns, start, end):
                             if idx < len(st.session_state[f'order_{i}']) - 1:
                                 if st.button(f'➡️', key=f'to_end_{unique_key}'):
                                     st.session_state[f'order_{i}'].append(st.session_state[f'order_{i}'].pop(idx))
+
+                # Обновляем порядок изображений в DataFrame сразу после изменения
+                reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
+                for j, col in enumerate(image_columns):
+                    if j < len(reordered_images):
+                        df.at[i, col] = reordered_images[j]
+                    else:
+                        df.at[i, col] = None
 
         st.write("---")
 
