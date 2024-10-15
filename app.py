@@ -134,7 +134,7 @@ def main(file_name, rows_per_page=10):
     else:
         st.session_state.page = 1
 
-     # Ввод номера страницы
+    # Ввод номера страницы
     st.session_state.page = st.number_input("Введите номер страницы", min_value=1, max_value=total_pages,
                                                 value=st.session_state.page)
 
@@ -143,22 +143,25 @@ def main(file_name, rows_per_page=10):
 
     display_data(df, image_columns, start_row, end_row)
 
-    # Сохранение изменений только для текущей страницы
-    if st.button("Сохранить изменения"):
-        for i in range(start_row, end_row):
-            if f'order_{i}' in st.session_state:
-                order = st.session_state[f'order_{i}']
-                reordered_images = [df.loc[i, image_columns[j]] for j in order]
+    # Сохранение изменений для всех страниц, а не только для текущей
+    if st.button("Сохранить все изменения"):
+        try:
+            for i in range(total_rows):
+                if f'order_{i}' in st.session_state:
+                    order = st.session_state[f'order_{i}']
+                    reordered_images = [df.loc[i, image_columns[j]] for j in order]
 
-                for j, col in enumerate(image_columns):
-                    if j < len(reordered_images):
-                        df.at[i, col] = reordered_images[j]
-                    else:
-                        df.at[i, col] = None
+                    for j, col in enumerate(image_columns):
+                        if j < len(reordered_images):
+                            df.at[i, col] = reordered_images[j]
+                        else:
+                            df.at[i, col] = None
 
-        # Перезаписываем файл только с изменениями на текущей странице
-        df.to_csv(file_name, index=False, sep=';')
-        st.success(f"Изменения сохранены только для текущей страницы в файл: {file_name}")
+            # Перезаписываем файл с изменениями для всех страниц
+            df.to_csv(file_name, index=False, sep=';')
+            st.success(f"Изменения сохранены для всех страниц в файл: {file_name}")
+        except Exception as e:
+            st.error(f"Ошибка при сохранении файла: {e}")
 
 if __name__ == "__main__":
     file_name = "update_assortment.csv"  # Замените на имя вашего файла
