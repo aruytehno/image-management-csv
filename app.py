@@ -95,6 +95,16 @@ def display_data(df, image_columns, start, end):
 
         st.write("---")
 
+# Функция для обновления порядка изображений
+def update_order_in_session(df, image_columns, start, end):
+    for i in range(start, end):
+        if f'order_{i}' in st.session_state:
+            reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
+            for j, col in enumerate(image_columns):
+                if j < len(reordered_images):
+                    df.at[i, col] = reordered_images[j]
+                else:
+                    df.at[i, col] = None
 
 # Основная функция
 def main(rows_per_page=10):
@@ -143,7 +153,9 @@ def main(rows_per_page=10):
         start_row = (st.session_state.page - 1) * rows_per_page
         end_row = min(start_row + rows_per_page, total_rows)
 
-        # Отображаем данные
+        # Обновляем порядок перед переключением страниц
+        update_order_in_session(df, image_columns, start_row, end_row)
+
         display_data(df, image_columns, start_row, end_row)
 
         # Кнопка для сохранения изменений внизу страницы
