@@ -126,16 +126,23 @@ def main(file_name, rows_per_page=10):
     if 'page' not in st.session_state:
         st.session_state.page = 1
 
-    st.session_state.page = st.number_input("Введите номер страницы", min_value=1, max_value=total_pages, value=st.session_state.page)
+
+    # Слайдер для выбора страницы
+    if total_pages > 1:
+        st.session_state.page = st.slider("Выберите страницу", min_value=1, max_value=total_pages,
+                                          value=st.session_state.page)
+    else:
+        st.session_state.page = 1
+
 
     start_row = (st.session_state.page - 1) * rows_per_page
     end_row = min(start_row + rows_per_page, total_rows)
 
     display_data(df, image_columns, start_row, end_row)
 
-    # Сохранение изменений
+    # Сохранение изменений только для текущей страницы
     if st.button("Сохранить изменения"):
-        for i in range(total_rows):
+        for i in range(start_row, end_row):
             if f'order_{i}' in st.session_state:
                 order = st.session_state[f'order_{i}']
                 reordered_images = [df.loc[i, image_columns[j]] for j in order]
@@ -146,9 +153,9 @@ def main(file_name, rows_per_page=10):
                     else:
                         df.at[i, col] = None
 
-        # Перезаписываем файл
+        # Перезаписываем файл только с изменениями на текущей странице
         df.to_csv(file_name, index=False, sep=';')
-        st.success(f"Изменения сохранены в файл: {file_name}")
+        st.success(f"Изменения сохранены только для текущей страницы в файл: {file_name}")
 
 if __name__ == "__main__":
     file_name = "update_assortment.csv"  # Замените на имя вашего файла
