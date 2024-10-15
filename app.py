@@ -147,12 +147,15 @@ def main(rows_per_page=10):
         display_data(df, image_columns, start_row, end_row)
 
         # Кнопка для сохранения изменений внизу страницы
+        # Кнопка для сохранения изменений внизу страницы
         if st.button("Сохранить изменения в CSV"):
+            # Применяем изменения для всех строк, а не только для текущей страницы
             for i in range(total_rows):
-                if i in st.session_state.orders:
-                    order = st.session_state.orders[i]
+                if f'order_{i}' in st.session_state:
+                    order = st.session_state[f'order_{i}']
                     reordered_images = [df.loc[i, image_columns[j]] for j in order]
 
+                    # Обновляем столбцы с изображениями
                     for j, col in enumerate(image_columns):
                         if j < len(reordered_images):
                             df.at[i, col] = reordered_images[j]
