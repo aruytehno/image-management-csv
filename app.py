@@ -46,7 +46,7 @@ def display_data(df, image_columns, start, end):
             # Создаем скроллбар для изображений
             scroll_container = st.container()
             with scroll_container:
-                cols = st.columns(len(images) if len(images) <= 10 else 10)
+                cols = st.columns(min(10, len(images)))
                 for idx, img_idx in enumerate(st.session_state[f'order_{i}']):
                     with cols[idx % 10]:
                         img_url = images[img_idx]
@@ -121,14 +121,18 @@ def main(rows_per_page=10):
         total_rows = df.shape[0]
         total_pages = math.ceil(total_rows / rows_per_page)
 
+        if 'orders' not in st.session_state:
+            st.session_state.orders = {}
+            for i in range(total_rows):
+                row_images = [df.loc[i, col] for col in image_columns if pd.notna(df.loc[i, col])]
+                st.session_state.orders[i] = list(range(len(row_images)))
         # Инициализируем страницу
         if 'page' not in st.session_state:
             st.session_state.page = 1
 
         # Слайдер для выбора страницы
         if total_pages > 1:
-            st.session_state.page = st.slider("Выберите страницу", min_value=1, max_value=total_pages,
-                                              value=st.session_state.page)
+            st.session_state.page = st.slider("Выберите страницу", min_value=1, max_value=total_pages, value=st.session_state.page)
         else:
             st.session_state.page = 1
 
@@ -144,20 +148,16 @@ def main(rows_per_page=10):
 
         # Кнопка для сохранения изменений внизу страницы
         if st.button("Сохранить изменения в CSV"):
-            # Обновляем порядок изображений в DataFrame
-            for i in range(start_row, end_row):
-                if f'order_{i}' in st.session_state:
-                    order = st.session_state[f'order_{i}']
-                    reordered_images = [None] * len(image_columns)  # Инициализируем список для хранения нового порядка
+            for i in range(total_rows):
+                if i in st.session_state.orders:
+                    order = st.session_state.orders[i]
+                    reordered_images = [df.loc[i, image_columns[j]] for j in order]
 
-                    # Обновляем порядок изображений на основе session_state
-                    for idx, img_idx in enumerate(order):
-                        if img_idx < len(image_columns):
-                            reordered_images[idx] = df.loc[i, image_columns[img_idx]]
-
-                    # Записываем обратно в DataFrame
                     for j, col in enumerate(image_columns):
-                        df.at[i, col] = reordered_images[j] if j < len(reordered_images) else None
+                        if j < len(reordered_images):
+                            df.at[i, col] = reordered_images[j]
+                        else:
+                            df.at[i, col] = None
 
             # Создание CSV для скачивания
             csv = df.to_csv(index=False, sep=';').encode('utf-8')
