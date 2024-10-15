@@ -137,14 +137,16 @@ def main(rows_per_page=10):
             for i in range(start_row, end_row):
                 if f'order_{i}' in st.session_state:
                     order = st.session_state[f'order_{i}']
-                    reordered_images = [df.loc[i, image_columns[j]] for j in order]
+                    reordered_images = [None] * len(image_columns)  # Инициализируем список для хранения нового порядка
 
-                    # Обновляем столбцы с изображениями
+                    # Обновляем порядок изображений на основе session_state
+                    for idx, img_idx in enumerate(order):
+                        if img_idx < len(image_columns):
+                            reordered_images[idx] = df.loc[i, image_columns[img_idx]]
+
+                    # Записываем обратно в DataFrame
                     for j, col in enumerate(image_columns):
-                        if j < len(reordered_images):
-                            df.at[i, col] = reordered_images[j]
-                        else:
-                            df.at[i, col] = None
+                        df.at[i, col] = reordered_images[j] if j < len(reordered_images) else None
 
             # Создание CSV для скачивания
             csv = df.to_csv(index=False, sep=';').encode('utf-8')
@@ -152,7 +154,7 @@ def main(rows_per_page=10):
             st.download_button(
                 label="Скачать обновлённый CSV",
                 data=csv,
-                file_name='updated_data.csv',
+                file_name='update_assortment.csv',
                 mime='text/csv',
             )
 
