@@ -42,6 +42,7 @@ def display_data(df, image_columns, start, end):
         st.session_state[f'order_{i}'] = [img_idx for img_idx in st.session_state[f'order_{i}'] if img_idx < len(images)]
 
         # Отображаем изображения, только если есть хотя бы одно изображение
+        # Отображаем изображения, только если есть хотя бы одно изображение
         if images:
             # Создаем скроллбар для изображений
             scroll_container = st.container()
@@ -60,27 +61,30 @@ def display_data(df, image_columns, start, end):
                             # st.caption(f"Размер: {formatted_size}")
                             # st.caption(f"Вес: {formatted_weight}")
                         else:
-                            # Создаём контейнер для изображения с текстом
-                            st.markdown("""
-                                   <div style='width:100px;height:100px;background-color:grey;display:flex;align-items:center;justify-content:center;color:white;flex-direction:column;'>
-                                       <span>bad link</span>
-                                       <a href='{img_url}' target='_blank' style='color:white; text-decoration:none;'>🔗</a>
-                                   </div>
-                               """.format(img_url=img_url), unsafe_allow_html=True)
+                            # Показать "bad link", если изображение не удалось загрузить
+                            st.markdown(f"""
+                                <div style='width:100px;height:100px;background-color:grey;display:flex;align-items:center;justify-content:center;color:white;flex-direction:column;'>
+                                    <span>bad link</span>
+                                    <a href='{img_url}' target='_blank' style='color:white; text-decoration:none;'>🔗</a>
+                                </div>
+                            """, unsafe_allow_html=True)
 
-                        # Создаем контейнер для всех трех кнопок, расположенных вертикально
+                        # Контейнер для кнопок перемещения
                         with st.container():
+                            # Кнопка для удаления изображения
                             if st.button(f'❌', key=f'delete_{unique_key}'):
                                 st.session_state[f'order_{i}'].remove(img_idx)
                                 df.at[i, image_columns[img_idx]] = None
 
-                            # Кнопка для смены порядка (влево)
-                            if st.button(f'⬅️', key=f'left_{unique_key}'):
-                                st.session_state[f'order_{i}'].insert(0, st.session_state[f'order_{i}'].pop(idx))
+                            # Кнопка для перемещения изображения в начало списка (если это не первое изображение)
+                            if idx > 0:
+                                if st.button(f'⬅️', key=f'to_start_{unique_key}'):
+                                    st.session_state[f'order_{i}'].insert(0, st.session_state[f'order_{i}'].pop(idx))
 
-                            # Кнопка для смены порядка (вправо)
-                            if st.button(f'➡️', key=f'right_{unique_key}'):
-                                st.session_state[f'order_{i}'].append(st.session_state[f'order_{i}'].pop(idx))
+                            # Кнопка для перемещения изображения в конец списка (если это не последнее изображение)
+                            if idx < len(st.session_state[f'order_{i}']) - 1:
+                                if st.button(f'➡️', key=f'to_end_{unique_key}'):
+                                    st.session_state[f'order_{i}'].append(st.session_state[f'order_{i}'].pop(idx))
 
         st.write("---")
 
