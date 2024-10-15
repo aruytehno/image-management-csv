@@ -67,18 +67,21 @@ def display_data(df, image_columns, start, end):
 
                             if idx > 0:
                                 if st.button(f'⬅️', key=f'to_start_{unique_key}'):
+                                    # Перемещаем ссылку на изображение в начало
                                     st.session_state[f'order_{i}'].insert(0, st.session_state[f'order_{i}'].pop(idx))
+                                    # Обновляем DataFrame
+                                    reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
+                                    for j, col in enumerate(image_columns):
+                                        df.at[i, col] = reordered_images[j] if j < len(reordered_images) else None
 
                             if idx < len(st.session_state[f'order_{i}']) - 1:
                                 if st.button(f'➡️', key=f'to_end_{unique_key}'):
+                                    # Перемещаем ссылку на изображение в конец
                                     st.session_state[f'order_{i}'].append(st.session_state[f'order_{i}'].pop(idx))
-
-                reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
-                for j, col in enumerate(image_columns):
-                    if j < len(reordered_images):
-                        df.at[i, col] = reordered_images[j]
-                    else:
-                        df.at[i, col] = None
+                                    # Обновляем DataFrame
+                                    reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
+                                    for j, col in enumerate(image_columns):
+                                        df.at[i, col] = reordered_images[j] if j < len(reordered_images) else None
 
         st.write("---")
 
