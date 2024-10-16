@@ -86,14 +86,17 @@ def display_data(df, image_columns, start, end):
                             if st.button(f'❌', key=f'delete_{unique_key}'):
                                 st.session_state[f'order_{i}'].remove(img_idx)
                                 df.at[i, image_columns[img_idx]] = None
+                                st.rerun()  # Обновляем интерфейс после удаления
 
                             if idx > 0:
                                 if st.button(f'⬅️', key=f'to_start_{unique_key}'):
                                     st.session_state[f'order_{i}'].insert(0, st.session_state[f'order_{i}'].pop(idx))
+                                    st.rerun()  # Обновляем интерфейс после изменения порядка
 
                             if idx < len(st.session_state[f'order_{i}']) - 1:
                                 if st.button(f'➡️', key=f'to_end_{unique_key}'):
                                     st.session_state[f'order_{i}'].append(st.session_state[f'order_{i}'].pop(idx))
+                                    st.rerun()  # Обновляем интерфейс после изменения порядка
 
                 reordered_images = [df.loc[i, image_columns[j]] for j in st.session_state[f'order_{i}']]
                 for j, col in enumerate(image_columns):
